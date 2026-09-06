@@ -1,0 +1,15 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+.git/
+data/
+outputs/
+models/
+checkpoints/
+runs/
+examples/_quickstart_output/
+*.nii.gz
+*.dcm
+.env
