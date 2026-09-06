@@ -1,0 +1,49 @@
+# Real medical imaging data - never committed
+data/
+!data/.gitkeep
+examples/_quickstart_output/
+*.nii
+*.nii.gz
+*.dcm
+!tests/fixtures/**/*.nii.gz
+raw_dicom/
+deidentified_dicom/
+DATASET_ROOT/
+
+# Model checkpoints and experiment outputs
+models/
+outputs/
+checkpoints/
+runs/
+mlruns/
+*.pt
+*.pth
+!tests/fixtures/**/*.pt
+
+# Secrets / environment
+.env
+*.pem
+*.key
+
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+venv/
+.pytest_cache/
+.ruff_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# OS / editor
+.DS_Store
+.vscode/
+.idea/
+
+# Job queue / worker runtime
+*.rdb
