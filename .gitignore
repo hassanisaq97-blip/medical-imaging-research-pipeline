@@ -1,21 +1,23 @@
 # Real medical imaging data - never committed
-data/
-!data/.gitkeep
+# (anchored to repo root with a leading "/" so this never matches an
+# in-package module such as src/medimg_pipeline/data/)
+/data/
+!/data/.gitkeep
 examples/_quickstart_output/
 *.nii
 *.nii.gz
 *.dcm
 !tests/fixtures/**/*.nii.gz
-raw_dicom/
-deidentified_dicom/
-DATASET_ROOT/
+/raw_dicom/
+/deidentified_dicom/
+/DATASET_ROOT/
 
 # Model checkpoints and experiment outputs
-models/
-outputs/
-checkpoints/
-runs/
-mlruns/
+/models/
+/outputs/
+/checkpoints/
+/runs/
+/mlruns/
 *.pt
 *.pth
 !tests/fixtures/**/*.pt
