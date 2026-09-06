@@ -45,15 +45,24 @@ though the DICOM standard itself uses "Patient Identity Removed" for a
 related concept, and even though everyday usage often says "anonymize"
 loosely.
 
-## What the Multimodal-HC data itself already is
+## Where this module is actually applied
 
-The Multimodal-HC dataset distributed to researchers (see
-`docs/data_access.md`) is already prepared for research release by
-DEPICT-RH -- defaced, with segmentation-adjacent identifying files
-withheld (see `docs/DEPICT_TECHNICAL_RESEARCH.md` §1.4). **This project
-did not de-identify that dataset and does not claim to have done so.**
-The anonymization module is demonstrated exclusively against small,
-procedurally generated **synthetic** DICOM fixtures containing obviously
-fake identifiers (see `tests/helpers.make_synthetic_dicom_series` and
-`tests/test_anonymization.py`), and is kept ready for a realistic future
-DICOM ingestion pathway (see README §6 / `medimg_pipeline ingest`).
+`medimg_pipeline data-import --dataset ircad` (see `docs/data_access.md`)
+runs every 3D-IRCADb-01 patient's CT and liver-mask DICOM series through
+this de-identification module before conversion to NIfTI -- IRCAD is
+already a public, research-cleared release with no DUA, so this is
+defense in depth rather than a requirement, but it means the module is
+exercised on real (if already-public) DICOM data, not only synthetic
+fixtures.
+
+The Multimodal-HC dataset (see `docs/data_access.md`) was never obtained
+in this environment, so this module was **not** run against it; any
+mention of Multimodal-HC's own defacing/de-identification elsewhere in
+this repository (`docs/DEPICT_TECHNICAL_RESEARCH.md` §1.4) describes what
+DEPICT-RH did before release, not anything this project performed.
+
+Beyond the IRCAD import path, the module is also tested directly against
+small, procedurally generated **synthetic** DICOM fixtures containing
+obviously fake identifiers (see `tests/helpers.make_synthetic_dicom_series`
+and `tests/test_anonymization.py`), and is kept ready for ingesting other
+DICOM sources (see README / `medimg_pipeline ingest`).

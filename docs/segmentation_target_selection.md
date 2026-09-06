@@ -2,8 +2,17 @@
 
 This project's primary ML task is automatic 3D anatomical segmentation
 from CT. This document records the reasoning for the chosen target,
-written before training any model, per the project brief's requirement to
-inspect available labels rather than choosing arbitrarily.
+written before training any model, against the dataset originally
+investigated for this project, DEPICT-RH's Multimodal-HC.
+
+**Update:** the real-data experiment now uses **3D-IRCADb-01** instead of
+Multimodal-HC (see `docs/data_access.md` for why -- Multimodal-HC's full
+imaging data requires a Data User Agreement). IRCAD-01 is itself a
+liver-segmentation dataset, so it carries no target-selection ambiguity:
+its ground truth *is* the liver. The analysis below is kept because it
+independently arrives at the same target (liver) from Multimodal-HC's
+label set, which is a useful cross-check, not because it was used to
+choose IRCAD's target.
 
 ## Constraints
 
@@ -66,20 +75,13 @@ target list later does not require re-running curation.
 
 ## Important caveat
 
-This decision is based on TotalSegmentator's publicly documented `total`
+This analysis is based on TotalSegmentator's publicly documented `total`
 task label set and general medical-imaging knowledge of organ size and
 stability, cross-checked against how `Multimodal-HC` itself uses the
-liver (as a PET reference organ). It is **not** based on running the
-curation pipeline against the real dataset, because full imaging access
-requires a manual PublicNeuro Data User Agreement that has not yet been
-completed in this environment (see `docs/data_access.md`). Running
-`python -m medimg_pipeline curate --data-root <DATASET_ROOT>` against the
-real data will produce actual per-subject, per-label foreground voxel
-counts and QC flags; if that data contradicts the assumptions above (e.g.
-unexpectedly poor liver mask QC for a subset of subjects), the manifest
-and QC report — not this document — are authoritative, and this document
-should be revisited.
-
-All quantitative results shown elsewhere in this repository until that
-point are produced on synthetic fixtures and are explicitly labelled as
-such — never presented as real measurements on `Multimodal-HC`.
+liver (as a PET reference organ) -- not on running the curation pipeline
+against real Multimodal-HC data, which was never obtained (see
+`docs/data_access.md`). It has no bearing on the actual real-data
+experiment now reported in the README, which trains and evaluates on
+3D-IRCADb-01's own liver ground truth directly -- see the README's
+"Real-data experiment" section for those results, and
+`docs/data_access.md` for the dataset switch.

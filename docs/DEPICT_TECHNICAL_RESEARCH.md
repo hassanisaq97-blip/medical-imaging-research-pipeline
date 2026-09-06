@@ -215,13 +215,14 @@ produce `Multimodal-HC`'s CT-derived masks, §1.4) includes large solid
 organs such as **liver**, **spleen**, and **kidneys**, alongside skeletal
 and vascular structures. Given the constraints in this brief (feasible on
 a laptop, sufficient foreground voxels, stable single-structure anatomy),
-this project targets **liver segmentation from low-dose CT
-(`*br38f_ct.nii.gz`)** as its primary 3D segmentation task, with kidneys
-noted as a natural extension. This choice is provisional pending running
-`medimg_pipeline curate` against the real dataset once DUA access is
-granted (see §1.5) — the manifest that command produces includes
-per-label foreground voxel counts specifically so that this decision can
-be verified quantitatively rather than assumed.
+this project targets **liver** as its segmentation class. Multimodal-HC's
+full imaging data requires a Data User Agreement (§1.2), which was not
+completed in this environment, so this reasoning was never checked
+against real Multimodal-HC foreground-voxel counts. The project's actual
+real-data experiment instead trains and evaluates on **3D-IRCADb-01**,
+which already ships its own liver ground truth directly -- see
+`docs/data_access.md` for the full explanation and `docs/
+segmentation_target_selection.md` for how the two relate.
 
 ## 6. Summary of what this project builds vs. what is DEPICT-RH's
 
