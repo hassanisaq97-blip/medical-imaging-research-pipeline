@@ -1,0 +1,61 @@
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    volumes:
+      - redis-data:/data
+
+  api:
+    build: .
+    command: ["python", "-m", "medimg_pipeline", "api"]
+    ports:
+      - "8000:8000"
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      MEDIMG_API_HOST: 0.0.0.0
+      MEDIMG_API_PORT: "8000"
+      MEDIMG_LOG_LEVEL: INFO
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - ./outputs:/app/outputs
+      - ./data:/app/data:ro
+
+  worker:
+    build: .
+    command: ["python", "-m", "medimg_pipeline", "worker"]
+    environment:
+      REDIS_URL: redis://redis:6379/0
+      MEDIMG_LOG_LEVEL: INFO
+      # Uncomment and set to "cuda" only on a host with NVIDIA Docker
+      # configured (see README "Docker/Linux" section).
+      # MEDIMG_DEVICE: cuda
+    depends_on:
+      redis:
+        condition: service_healthy
+    volumes:
+      - ./outputs:/app/outputs
+      - ./data:/app/data:ro
+    # GPU support (Linux + NVIDIA Container Toolkit only) -- uncomment:
+    # deploy:
+    #   resources:
+    #     reservations:
+    #       devices:
+    #         - driver: nvidia
+    #           count: 1
+    #           capabilities: [gpu]
+
+volumes:
+  redis-data:
