@@ -64,7 +64,12 @@ def run_training(config: TrainConfig) -> Path:
     post_pred = AsDiscrete(argmax=True, to_onehot=2)
     post_label = AsDiscrete(to_onehot=2)
 
-    scaler = torch.amp.GradScaler(device.type, enabled=use_amp)
+    # Always construct for "cuda": torch.amp.GradScaler rejects "mps" as a
+    # device string outright (even with enabled=False), and use_amp is only
+    # ever True when device.type == "cuda" (see supports_amp), so the
+    # scaler is genuinely unused on any other device -- "cuda" here is a
+    # safe placeholder, never a real assumption about the active device.
+    scaler = torch.amp.GradScaler("cuda", enabled=use_amp)
 
     tracker = ExperimentTracker(
         experiment_name=config.experiment_name,
