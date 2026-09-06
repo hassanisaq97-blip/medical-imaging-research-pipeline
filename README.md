@@ -68,8 +68,7 @@ dataset. Downloading it (a five-minute registration, no fee) and running
 
 ```bash
 medimg_pipeline data-import --dataset ircad --input <path> --staging data/.staging/ircad --output data/ircad
-medimg_pipeline curate --data-root data/ircad
-medimg_pipeline train --config configs/train_small.yaml
+bash scripts/run_real_experiment.sh   # curate -> train -> evaluate (Dice/IoU) -> QC overlay
 ```
 
 on any machine with normal internet access is the only step remaining to

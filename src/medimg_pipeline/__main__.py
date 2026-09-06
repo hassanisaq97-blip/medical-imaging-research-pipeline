@@ -142,6 +142,55 @@ def _cmd_infer(args: argparse.Namespace) -> None:
         print(f"QC overlay: {qc_path}")
 
 
+def _cmd_evaluate(args: argparse.Namespace) -> None:
+    from pathlib import Path
+
+    from medimg_pipeline.imaging.nifti import load_nifti
+    from medimg_pipeline.inference.evaluate import evaluate_test_split
+    from medimg_pipeline.qc.visual import generate_overlay_figure
+
+    report = evaluate_test_split(
+        args.manifest, args.checkpoint, args.output, split=args.split, device=args.device
+    )
+    report.write_json(f"{args.output.rstrip('/')}/evaluation_report.json")
+    report.write_csv(f"{args.output.rstrip('/')}/evaluation_results.csv")
+
+    print(f"Evaluated {report.n_subjects} '{args.split}'-split subject(s).")
+    if report.mean_dice is not None:
+        print(f"Mean Dice: {report.mean_dice}   Mean IoU: {report.mean_iou}")
+    for r in report.results:
+        if r.status == "ok":
+            print(f"  {r.subject_id}: Dice={r.dice}  IoU={r.iou}")
+        else:
+            print(f"  {r.subject_id}: FAILED ({r.error})")
+    print(f"Full results: {args.output.rstrip('/')}/evaluation_results.csv")
+
+    ok_results = [r for r in report.results if r.status == "ok"]
+    if ok_results:
+        import pandas as pd
+
+        first = ok_results[0]
+        df = pd.read_csv(args.manifest)
+        row = df[df.subject_id == first.subject_id].iloc[0]
+        image_array, _, _ = load_nifti(row.image_path)
+        # The exact prediction filename depends on the input image's stem;
+        # locate it directly rather than guessing.
+        pred_dir = Path(args.output) / first.subject_id
+        pred_path = next(pred_dir.glob("*_seg.nii.gz"))
+        pred_array, _, _ = load_nifti(pred_path)
+        gt_array, _, _ = load_nifti(row.mask_path)
+
+        qc_path = f"{args.output.rstrip('/')}/qc_overlay_{first.subject_id}.png"
+        generate_overlay_figure(
+            image_array,
+            pred_array,
+            qc_path,
+            ground_truth=gt_array,
+            title=f"{first.subject_id}: ground truth (green) vs. prediction (red)",
+        )
+        print(f"QC overlay (ground truth vs. prediction): {qc_path}")
+
+
 def _cmd_api(args: argparse.Namespace) -> None:
     import uvicorn
 
@@ -243,6 +292,16 @@ def build_parser() -> argparse.ArgumentParser:
         "--ground-truth", default=None, help="Optional ground-truth mask for QC overlay."
     )
     p_infer.set_defaults(func=_cmd_infer)
+
+    p_evaluate = subparsers.add_parser(
+        "evaluate", help="Evaluate a checkpoint on held-out manifest subjects (Dice/IoU)."
+    )
+    p_evaluate.add_argument("--manifest", required=True)
+    p_evaluate.add_argument("--checkpoint", required=True)
+    p_evaluate.add_argument("--output", required=True)
+    p_evaluate.add_argument("--split", default="test", choices=["train", "val", "test"])
+    p_evaluate.add_argument("--device", default="auto", choices=["auto", "cpu", "mps", "cuda"])
+    p_evaluate.set_defaults(func=_cmd_evaluate)
 
     p_api = subparsers.add_parser("api", help="Run the FastAPI job-queue API (uvicorn).")
     p_api.add_argument("--host", default=None)
