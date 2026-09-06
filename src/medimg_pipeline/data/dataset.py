@@ -20,8 +20,7 @@ def manifest_to_data_dicts(manifest_path: str | Path, split: str) -> list[dict]:
     df = pd.read_csv(manifest_path)
     subset = df[(df.qc_status == "pass") & (df.split == split)]
     return [
-        {"image": row.image_path, "label": row.mask_path}
-        for row in subset.itertuples(index=False)
+        {"image": row.image_path, "label": row.mask_path} for row in subset.itertuples(index=False)
     ]
 
 
@@ -39,17 +38,18 @@ def build_dataloaders(
     containers, so this project only enables it when explicitly asked.
     """
 
-    from monai.data import CacheDataset, DataLoader, list_data_collate
+    from monai.data import DataLoader, Dataset, list_data_collate
 
     from medimg_pipeline.preprocessing.transforms import get_eval_transforms, get_train_transforms
 
     train_dicts = manifest_to_data_dicts(manifest_path, "train")
     val_dicts = manifest_to_data_dicts(manifest_path, "val")
 
-    train_ds = CacheDataset(
-        data=train_dicts, transform=get_train_transforms(patch_size), cache_rate=0.0
-    )
-    val_ds = CacheDataset(data=val_dicts, transform=get_eval_transforms(), cache_rate=0.0)
+    # Plain Dataset, not CacheDataset: caching pre-transformed volumes in
+    # memory only pays off across many epochs on a dataset small enough to
+    # fit in RAM, which is not a general assumption this project makes.
+    train_ds = Dataset(data=train_dicts, transform=get_train_transforms(patch_size))
+    val_ds = Dataset(data=val_dicts, transform=get_eval_transforms())
 
     train_loader = DataLoader(
         train_ds,

@@ -62,12 +62,35 @@ def _cmd_ingest(args: argparse.Namespace) -> None:
     print(f"Converted {report.n_series_found} series. Report: {report_path}")
 
 
+def _cmd_data_import(args: argparse.Namespace) -> None:
+    if args.dataset != "ircad":
+        raise ValueError(f"Unknown --dataset {args.dataset!r}. Only 'ircad' is supported.")
+
+    from medimg_pipeline.curation.ircad_import import import_ircad_dataset
+    from medimg_pipeline.utils.env import anonymization_salt
+
+    salt = args.salt or anonymization_salt()
+    if not salt:
+        import secrets
+
+        salt = secrets.token_hex(16)
+        logger.warning("No --salt given; generated an ephemeral salt (see `anonymize` command).")
+
+    report = import_ircad_dataset(args.input, args.staging, args.output, salt=salt)
+    report_path = f"{args.output.rstrip('/')}/_import_report.json"
+    report.write_json(report_path)
+    print(f"Imported {report.n_ok}/{len(report.patients)} patients. Report: {report_path}")
+    if report.n_ok < len(report.patients):
+        print("Some patients were skipped or failed -- see the report for reasons.")
+
+
 def _cmd_curate(args: argparse.Namespace) -> None:
     from medimg_pipeline.curation.config import CurationConfig
     from medimg_pipeline.curation.manifest import run_curation
 
     config = CurationConfig(
         data_root=args.data_root,
+        subject_glob=args.subject_glob,
         image_glob=args.image_glob,
         mask_glob=args.mask_glob,
         label_index=args.label_index,
@@ -167,10 +190,31 @@ def build_parser() -> argparse.ArgumentParser:
     p_ingest.add_argument("--backend", default="dicom2nifti", choices=["dicom2nifti", "dcm2niix"])
     p_ingest.set_defaults(func=_cmd_ingest)
 
+    p_data_import = subparsers.add_parser(
+        "data-import",
+        help="Import a manually downloaded real dataset (e.g. 3D-IRCADb-01) into the "
+        "standard curation layout.",
+    )
+    p_data_import.add_argument("--dataset", required=True, choices=["ircad"])
+    p_data_import.add_argument("--input", required=True, help="Path to the downloaded dataset.")
+    p_data_import.add_argument(
+        "--staging", required=True, help="Where de-identified DICOM files are written."
+    )
+    p_data_import.add_argument(
+        "--output", required=True, help="Where the curated NIfTI layout is written."
+    )
+    p_data_import.add_argument("--salt", default=None)
+    p_data_import.set_defaults(func=_cmd_data_import)
+
     p_curate = subparsers.add_parser(
         "curate", help="Build a curated dataset manifest with QC and splits."
     )
     p_curate.add_argument("--data-root", required=True)
+    p_curate.add_argument(
+        "--subject-glob",
+        default="*",
+        help="Pattern (relative to --data-root) for subject directories.",
+    )
     p_curate.add_argument("--image-glob", default="{subject}/ct/*_ct.nii.gz")
     p_curate.add_argument("--mask-glob", default="{subject}/seg/*_seg-*.nii.gz")
     p_curate.add_argument("--label-index", type=int, default=None)

@@ -106,7 +106,6 @@ REMOVE_KEYWORDS: tuple[str, ...] = (
     "MedicalRecordLocator",
     "PatientComments",
     "RequestAttributesSequence",
-    "PersonName",
 )
 
 # Tags replaced with a deterministic pseudonym rather than removed,
@@ -270,7 +269,7 @@ def deidentify_dataset(ds, salt: str) -> tuple[object, list[TagAction]]:
 
     for keyword in REMOVE_KEYWORDS:
         if keyword in ds:
-            del ds[ds.data_element(keyword).tag]
+            delattr(ds, keyword)
             actions.append(TagAction(tag=keyword, action="removed"))
 
     for keyword in PSEUDONYMIZE_ID_KEYWORDS:

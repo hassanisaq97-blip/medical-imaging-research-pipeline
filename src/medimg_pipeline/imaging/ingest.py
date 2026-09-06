@@ -133,6 +133,25 @@ def _convert_series_dcm2niix(files: list[Path], output_path: Path) -> None:
             )
 
 
+def convert_dicom_series(
+    files: list[Path], output_path: Path, *, backend: str = "dicom2nifti"
+) -> None:
+    """Convert one DICOM series (a flat list of file paths, all belonging
+    to the same series) to a single NIfTI file. Shared by
+    `ingest_dicom_directory` and dataset-specific import commands (e.g.
+    `medimg_pipeline.curation.ircad_import`) so there is one place that
+    knows how to dispatch between backends.
+    """
+
+    if backend not in {"dicom2nifti", "dcm2niix"}:
+        raise ValueError(f"Unknown backend: {backend!r}. Use 'dicom2nifti' or 'dcm2niix'.")
+    if backend == "dcm2niix":
+        _check_dcm2niix_available()
+        _convert_series_dcm2niix(files, output_path)
+    else:
+        _convert_series_dicom2nifti(files, output_path)
+
+
 def ingest_dicom_directory(
     input_dir: str | Path,
     staging_dir: str | Path,
@@ -153,7 +172,7 @@ def ingest_dicom_directory(
     if backend not in {"dicom2nifti", "dcm2niix"}:
         raise ValueError(f"Unknown backend: {backend!r}. Use 'dicom2nifti' or 'dcm2niix'.")
     if backend == "dcm2niix":
-        _check_dcm2niix_available()
+        _check_dcm2niix_available()  # fail fast, before de-identifying anything
 
     input_dir = Path(input_dir)
     staging_dir = Path(staging_dir)
@@ -171,10 +190,7 @@ def ingest_dicom_directory(
     for series_uid, files in series_groups.items():
         output_path = output_dir / f"series-{series_uid[-12:]}.nii.gz"
         try:
-            if backend == "dcm2niix":
-                _convert_series_dcm2niix(files, output_path)
-            else:
-                _convert_series_dicom2nifti(files, output_path)
+            convert_dicom_series(files, output_path, backend=backend)
 
             logger.info("Step 4/4: validating converted NIfTI for series %s", series_uid)
             _, _, info = load_nifti(output_path)

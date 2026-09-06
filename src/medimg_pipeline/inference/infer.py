@@ -67,7 +67,11 @@ def run_inference(
     start = time.time()
 
     resolved_device = resolve_device(device)
-    checkpoint = torch.load(checkpoint_path, map_location=resolved_device, weights_only=False)
+    # weights_only=True: our own checkpoints contain only tensors and plain
+    # dict/tuple/scalar config values, so the restricted unpickler is
+    # sufficient and avoids the arbitrary-code-execution risk of loading a
+    # tampered or untrusted checkpoint file with weights_only=False.
+    checkpoint = torch.load(checkpoint_path, map_location=resolved_device, weights_only=True)
     config = checkpoint.get("config", {})
 
     model = build_unet(

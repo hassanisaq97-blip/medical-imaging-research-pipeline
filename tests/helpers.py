@@ -156,3 +156,114 @@ def make_synthetic_dicom_series(
         )
 
     return series_dir
+
+
+def _write_dicom_series(
+    directory: Path,
+    *,
+    n_slices: int,
+    rows: int,
+    cols: int,
+    pixel_fn,
+    study_uid: str,
+    patient_id: str,
+) -> None:
+    from pydicom.dataset import FileDataset, FileMetaDataset
+    from pydicom.uid import ExplicitVRLittleEndian, generate_uid
+
+    directory.mkdir(parents=True, exist_ok=True)
+    series_uid = generate_uid()
+
+    for i in range(n_slices):
+        file_meta = FileMetaDataset()
+        file_meta.MediaStorageSOPClassUID = generate_uid()
+        file_meta.MediaStorageSOPInstanceUID = generate_uid()
+        file_meta.TransferSyntaxUID = ExplicitVRLittleEndian
+
+        ds = FileDataset(None, {}, file_meta=file_meta, preamble=b"\0" * 128)
+        ds.PatientName = "Synthetic^Patient^FAKE"
+        ds.PatientID = patient_id
+        ds.StudyInstanceUID = study_uid
+        ds.SeriesInstanceUID = series_uid
+        ds.SOPInstanceUID = file_meta.MediaStorageSOPInstanceUID
+        ds.SOPClassUID = file_meta.MediaStorageSOPClassUID
+        ds.Modality = "CT"
+        ds.Manufacturer = "SyntheticVendor"
+        ds.Rows = rows
+        ds.Columns = cols
+        ds.BitsAllocated = 16
+        ds.BitsStored = 16
+        ds.HighBit = 15
+        ds.PixelRepresentation = 1
+        ds.SamplesPerPixel = 1
+        ds.PhotometricInterpretation = "MONOCHROME2"
+        ds.PixelSpacing = [1.0, 1.0]
+        ds.SliceThickness = 2.0
+        ds.InstanceNumber = i + 1
+        ds.ImageOrientationPatient = [1.0, 0.0, 0.0, 0.0, 1.0, 0.0]
+        ds.ImagePositionPatient = [0.0, 0.0, float(i) * 2.0]
+        ds.SliceLocation = float(i) * 2.0
+        ds.PatientPosition = "HFS"
+        ds.RescaleIntercept = 0.0
+        ds.RescaleSlope = 1.0
+        ds.PixelData = pixel_fn(rows, cols, i).astype(np.int16).tobytes()
+
+        ds.save_as(
+            str(directory / f"image_{i:03d}"),
+            enforce_file_format=True,
+            little_endian=True,
+            implicit_vr=False,
+        )
+
+
+def make_synthetic_ircad_patient(
+    root: Path, patient_id: str, *, n_slices: int = 4, rows: int = 16, cols: int = 16
+) -> Path:
+    """Write a synthetic patient directory in 3D-IRCADb-01's documented
+    layout (see `medimg_pipeline.curation.ircad_import`):
+
+        <root>/<patient_id>/PATIENT_DICOM/       CT series
+        <root>/<patient_id>/MASKS_DICOM/liver/   matching liver mask series
+
+    Both series share identical geometry so the imported CT and mask
+    align, and the "liver" is a bright disc in a fixed quadrant so the
+    mask is a meaningful, non-trivial region rather than empty.
+    """
+
+    from pydicom.uid import generate_uid
+
+    study_uid = generate_uid()
+    patient_dir = root / patient_id
+
+    yy, xx = np.meshgrid(np.arange(rows), np.arange(cols), indexing="ij")
+    disc = ((yy - rows * 0.6) ** 2 + (xx - cols * 0.6) ** 2) <= (min(rows, cols) / 5) ** 2
+
+    def ct_pixels(rows: int, cols: int, _slice_index: int) -> np.ndarray:
+        base = np.full((rows, cols), 40, dtype=np.int16)
+        base[disc] = 120
+        return base
+
+    def mask_pixels(rows: int, cols: int, _slice_index: int) -> np.ndarray:
+        mask = np.zeros((rows, cols), dtype=np.int16)
+        mask[disc] = 1
+        return mask
+
+    _write_dicom_series(
+        patient_dir / "PATIENT_DICOM",
+        n_slices=n_slices,
+        rows=rows,
+        cols=cols,
+        pixel_fn=ct_pixels,
+        study_uid=study_uid,
+        patient_id=patient_id,
+    )
+    _write_dicom_series(
+        patient_dir / "MASKS_DICOM" / "liver",
+        n_slices=n_slices,
+        rows=rows,
+        cols=cols,
+        pixel_fn=mask_pixels,
+        study_uid=study_uid,
+        patient_id=patient_id,
+    )
+    return patient_dir

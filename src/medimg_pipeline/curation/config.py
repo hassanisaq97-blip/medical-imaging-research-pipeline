@@ -22,7 +22,13 @@ from pathlib import Path
 @dataclass
 class CurationConfig:
     data_root: str
-    subject_glob: str = "sub-*"
+    # "*" by default (any subdirectory of data_root is a candidate subject)
+    # rather than a BIDS-style "sub-*", since this project's curated
+    # layout (<subject>/ct/..., <subject>/seg/...) is written by more than
+    # one dataset-specific importer with different subject-ID conventions
+    # (e.g. medimg_pipeline.curation.ircad_import uses IRCAD's own
+    # "3Dircadb1.N" folder names, not "sub-N").
+    subject_glob: str = "*"
     image_glob: str = "{subject}/ct/*_ct.nii.gz"
     mask_glob: str = "{subject}/seg/*_seg-*.nii.gz"
     # Which integer label in the mask volume is foreground. None means the

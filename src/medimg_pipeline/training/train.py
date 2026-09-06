@@ -180,9 +180,7 @@ def run_training(config: TrainConfig) -> Path:
     if not checkpoint_path.exists():
         # No validation batches ever ran (e.g. tiny smoke-test dataset) --
         # still save something so downstream inference has a checkpoint.
-        import torch as _torch
-
-        _torch.save(
+        torch.save(
             {"model_state_dict": model.state_dict(), "config": config.__dict__, "val_dice": None},
             checkpoint_path,
         )
@@ -217,9 +215,14 @@ def _validate(model, val_loader, loss_fn, dice_metric, post_pred, post_label, de
         for batch in val_loader:
             images = batch["image"].to(device)
             labels = batch["label"].to(device)
-            outputs = sliding_window_inference(
-                images, roi_size=patch_size, sw_batch_size=1, predictor=model
-            )
+            try:
+                outputs = sliding_window_inference(
+                    images, roi_size=patch_size, sw_batch_size=1, predictor=model
+                )
+            except RuntimeError as exc:
+                if _is_oom_error(exc):
+                    raise OutOfMemoryError(exc) from exc
+                raise
             loss = loss_fn(outputs, labels)
             running_loss += loss.item()
             n_batches += 1

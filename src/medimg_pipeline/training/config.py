@@ -30,6 +30,8 @@ class TrainConfig:
     weight_decay: float = 1e-5
     num_epochs: int = 100
     val_interval: int = 1
+    # Counted in VALIDATION CHECKS, not raw epochs: with val_interval=2,
+    # a patience of 15 tolerates 15 checks (30 epochs) without improvement.
     early_stopping_patience: int = 15
 
     device: str = "auto"

@@ -84,6 +84,13 @@ def build_manifest(config: CurationConfig) -> tuple[pd.DataFrame, QCReport]:
 
     root = config.data_root_path
     subjects = discover_subjects(config)
+    if not subjects:
+        logger.warning(
+            "No subject directories matched pattern %r under %s -- check --data-root and "
+            "--subject-glob rather than assuming an empty dataset.",
+            config.subject_glob,
+            root,
+        )
     records: list[SubjectRecord] = []
     excluded: list[dict] = []
 
