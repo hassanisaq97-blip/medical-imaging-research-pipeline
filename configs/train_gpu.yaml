@@ -1,0 +1,27 @@
+# Larger training config for a real CUDA GPU (e.g. a workstation/cluster
+# node with >=16GB VRAM). Wider U-Net, larger patches, larger batch size.
+# Requires --device cuda to be actually available; falls back to an
+# explicit DeviceUnavailableError (not a silent CPU run) if it is not,
+# since running this config on CPU would be impractically slow.
+
+manifest_path: outputs/curation/data_manifest.csv
+output_dir: outputs/training/gpu
+experiment_name: liver_segmentation_gpu
+
+patch_size: [128, 128, 128]
+batch_size: 4
+num_workers: 8
+
+channels: [32, 64, 128, 256, 320]
+strides: [2, 2, 2, 2]
+num_res_units: 2
+
+learning_rate: 0.0002
+weight_decay: 0.00001
+num_epochs: 300
+val_interval: 2
+early_stopping_patience: 30
+
+device: cuda
+amp: true
+seed: 42
